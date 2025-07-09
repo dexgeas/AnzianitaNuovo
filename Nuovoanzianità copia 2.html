@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Calcolatore Anzianità di Servizio</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    body {
+      font-family: 'Inter', sans-serif;
+      background-color: #f0f4f8;
+    }
+    input:focus,
+    button:focus {
+      outline: none;
+      box-shadow: 0 0 0 3px rgba(66, 153, 225, 0.5);
+    }
+  </style>
+</head>
+<body class="flex items-center justify-center min-h-screen p-4">
+  <div class="bg-white p-8 rounded-xl shadow-2xl w-full max-w-md border border-blue-200">
+    <h1 class="text-3xl font-extrabold text-center text-blue-700 mb-6">Calcolatore Anzianità</h1>
+    <p class="text-center text-gray-600 mb-8">Inserisci i dati per calcolare l'anzianità o la data, usando il calendario commerciale (360 giorni).</p>
+
+    <div class="flex items-center justify-center mb-6">
+      <span class="text-gray-700 font-semibold mr-3">Calcola Anzianità alla Data Y</span>
+      <label for="modeToggle" class="relative inline-flex items-center cursor-pointer">
+        <input type="checkbox" id="modeToggle" class="sr-only peer" />
+        <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+      </label>
+      <span class="text-gray-700 font-semibold ml-3">Calcola Data Y per Anzianità</span>
+    </div>
+
+    <div class="space-y-6">
+      <div>
+        <label for="dateX" class="block text-sm font-medium text-gray-700 mb-2">Data di riferimento (X):</label>
+        <input type="date" id="dateX" class="block w-full px-4 py-2 border border-gray-300 rounded-lg shadow-sm" required />
+      </div>
+
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-2">Anzianità di servizio alla Data X:</label>
+        <div class="grid grid-cols-3 gap-4">
+          <input type="number" id="initialYears" placeholder="Anni" min="0" value="0" class="text-center px-4 py-2 border rounded-lg" required />
+          <input type="number" id="initialMonths" placeholder="Mesi" min="0" max="11" value="0" class="text-center px-4 py-2 border rounded-lg" required />
+          <input type="number" id="initialDays" placeholder="Giorni" min="0" max="29" value="0" class="text-center px-4 py-2 border rounded-lg" required />
+        </div>
+      </div>
+
+      <div id="calculateSenioritySection">
+        <label for="dateY" class="block text-sm font-medium text-gray-700 mb-2">Data di calcolo (Y):</label>
+        <input type="date" id="dateY" class="block w-full px-4 py-2 border border-gray-300 rounded-lg shadow-sm" required />
+      </div>
+
+      <div id="calculateDateSection" class="hidden">
+        <label class="block text-sm font-medium text-gray-700 mb-2">Anzianità desiderata (Y):</label>
+        <div class="grid grid-cols-3 gap-4">
+          <input type="number" id="targetYears" placeholder="Anni" min="0" value="0" class="text-center px-4 py-2 border rounded-lg" required />
+          <input type="number" id="targetMonths" placeholder="Mesi" min="0" max="11" value="0" class="text-center px-4 py-2 border rounded-lg" required />
+          <input type="number" id="targetDays" placeholder="Giorni" min="0" max="29" value="0" class="text-center px-4 py-2 border rounded-lg" required />
+        </div>
+      </div>
+
+      <div id="interruptionsSection">
+        <label class="block text-sm font-medium text-gray-700 mb-2">Periodi di interruzione (non conteggiati):</label>
+        <div id="interruptionsList" class="space-y-2"></div>
+        <button type="button" id="addInterruptionBtn" class="mt-2 text-blue-600 hover:underline text-sm">+ Aggiungi un'interruzione</button>
+      </div>
+
+      <button id="calculateBtn" class="w-full bg-gradient-to-r from-blue-500 to-blue-600 text-white py-3 px-6 rounded-lg shadow-lg hover:from-blue-600 hover:to-blue-700 font-semibold text-lg">
+        Calcola Anzianità
+      </button>
+
+      <div id="result" class="mt-8 p-6 bg-blue-50 border border-blue-200 rounded-xl text-center text-blue-800 text-xl font-bold hidden"></div>
+      <div id="messageBox" class="mt-4 p-4 bg-red-100 border border-red-400 text-red-700 rounded-lg hidden" role="alert">
+        <p id="messageText"></p>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    function addInterruption() {
+      const container = document.getElementById("interruptionsList");
+      const div = document.createElement("div");
+      div.classList.add("flex", "gap-2", "items-center");
+      div.innerHTML = `
+        <input type="date" class="interruption-start px-2 py-1 border rounded" required />
+        <input type="date" class="interruption-end px-2 py-1 border rounded" required />
+        <button type="button" class="text-red-500 font-bold text-lg" onclick="this.parentElement.remove()">&times;</button>
+      `;
+      container.appendChild(div);
+    }
+
+    document.addEventListener("DOMContentLoaded", () => {
+      const dateXInput = document.getElementById("dateX");
+      const dateYInput = document.getElementById("dateY");
+      const modeToggle = document.getElementById("modeToggle");
+      const calculateBtn = document.getElementById("calculateBtn");
+      const resultDiv = document.getElementById("result");
+      const messageBox = document.getElementById("messageBox");
+      const messageText = document.getElementById("messageText");
+      const calculateSenioritySection = document.getElementById("calculateSenioritySection");
+      const calculateDateSection = document.getElementById("calculateDateSection");
+
+      document.getElementById("addInterruptionBtn").addEventListener("click", addInterruption);
+
+      dateXInput.valueAsDate = new Date();
+      dateYInput.valueAsDate = new Date(new Date().setFullYear(new Date().getFullYear() + 1));
+
+      modeToggle.addEventListener("change", () => {
+        calculateSenioritySection.classList.toggle("hidden");
+        calculateDateSection.classList.toggle("hidden");
+        calculateBtn.textContent = modeToggle.checked ? "Calcola Data Y" : "Calcola Anzianità";
+        resultDiv.classList.add("hidden");
+        messageBox.classList.add("hidden");
+      });
+
+      calculateBtn.addEventListener("click", () => {
+        const dateX = new Date(dateXInput.value);
+        const commercialX = dateToCommercialDays(dateX);
+        const initialYears = parseInt(document.getElementById("initialYears").value);
+        const initialMonths = parseInt(document.getElementById("initialMonths").value);
+        const initialDays = parseInt(document.getElementById("initialDays").value);
+        const initialSeniority = initialYears * 360 + initialMonths * 30 + initialDays;
+
+        let totalInterruptionDays = 0;
+        document.querySelectorAll("#interruptionsList > div").forEach((row) => {
+          const start = new Date(row.querySelector(".interruption-start").value);
+          const end = new Date(row.querySelector(".interruption-end").value);
+          if (!isNaN(start) && !isNaN(end) && end >= start) {
+            totalInterruptionDays += dateToCommercialDays(end) - dateToCommercialDays(start) + 1;
+          }
+        });
+
+        if (!modeToggle.checked) {
+          const dateY = new Date(dateYInput.value);
+          const commercialY = dateToCommercialDays(dateY);
+          const duration = commercialY - commercialX - totalInterruptionDays;
+          const total = initialSeniority + duration;
+
+          if (total < 0) {
+            return showMessage("L'anzianità risultante è negativa. Controlla le date e le interruzioni.");
+          }
+
+          const y = Math.floor(total / 360);
+          const m = Math.floor((total % 360) / 30);
+          const d = total % 30;
+          resultDiv.innerHTML = `Anzianità alla Data Y (${formatDateItalian(dateY)}):<br><span class="text-blue-600">${y}</span> anni, <span class="text-blue-600">${m}</span> mesi, <span class="text-blue-600">${d}</span> giorni`;
+        } else {
+          const targetYears = parseInt(document.getElementById("targetYears").value);
+          const targetMonths = parseInt(document.getElementById("targetMonths").value);
+          const targetDays = parseInt(document.getElementById("targetDays").value);
+          const target = targetYears * 360 + targetMonths * 30 + targetDays;
+          const total = commercialX - initialSeniority + target + totalInterruptionDays;
+          const dateResult = commercialDaysToDate(total);
+          resultDiv.innerHTML = `Data Y per Anzianità richiesta (<span class="text-blue-600">${targetYears}</span> anni, <span class="text-blue-600">${targetMonths}</span> mesi, <span class="text-blue-600">${targetDays}</span> giorni):<br><span class="text-blue-600">${formatDateItalian(dateResult)}</span>`;
+        }
+
+        resultDiv.classList.remove("hidden");
+        messageBox.classList.add("hidden");
+      });
+
+      function showMessage(msg) {
+        messageText.textContent = msg;
+        messageBox.classList.remove("hidden");
+        resultDiv.classList.add("hidden");
+      }
+
+      function dateToCommercialDays(dateObj) {
+        return dateObj.getFullYear() * 360 + dateObj.getMonth() * 30 + (dateObj.getDate() - 1);
+      }
+
+      function commercialDaysToDate(totalDays) {
+        const y = Math.floor(totalDays / 360);
+        const m = Math.floor((totalDays % 360) / 30);
+        const d = totalDays % 30 + 1;
+        return new Date(y, m, d);
+      }
+
+      function formatDateItalian(dateObj) {
+        return `${String(dateObj.getDate()).padStart(2, "0")}-${String(dateObj.getMonth() + 1).padStart(2, "0")}-${dateObj.getFullYear()}`;
+      }
+    });
+  </script>
+</body>
+</html>
